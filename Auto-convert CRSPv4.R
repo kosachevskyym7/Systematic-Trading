@@ -9,29 +9,22 @@ library(twilio)
 library(urlshorteneR)
 
 
-api_tiingo <- "7eef93d596bb5db06a125388ed2ae999a4332fd7"
+#api_tiingo <- your_api_key
 riingo::riingo_set_token(api_tiingo)
-
-Sys.setenv(TWILIO_SID = "AC916f22e972c6f4e653e832853822ec1c")
-Sys.setenv(TWILIO_TOKEN = "65e5d47580543f62d729d34d886c525f")
 
 options(pillar.sigfig=5)
 
-
-#twilio u: mk@merusglobal.com
-#twilion p: f*fh74jF&74jFf$78fk4(*)
 
 gm_auth_configure(path = "gmail_api.json")
 gm_auth(cache = ".secret")
 files_old <- list.files(path="P:/CRSP", pattern="*.txt", full.names=TRUE, recursive=FALSE)
 
-previous_file_name <- "P:/CRSP/crsp_indexchanges_20230504_1030.csv"
+previous_file_name <- "previous_file_name"
 while (TRUE) {
   
   files_new <- list.files(path="P:/CRSP", pattern="*.txt", full.names=TRUE, recursive=FALSE)
   new_files <- files_new[!(files_new %in% files_old)]
   for (i in new_files){
-    ####
     file_name <- i
     new_file_name <- paste(substr(file_name, 1, nchar(file_name)-4), ".csv", sep = "")
     new_file_name_summary <- paste(substr(file_name, 1, nchar(file_name)-4), "_summary.xlsx", sep = "")
@@ -53,13 +46,7 @@ while (TRUE) {
         relocate(Ticker, .before = Effective_on_Open_Date) %>%
         relocate(Holdings_Change, .after = Effective_After_Close_Date) %>%
         relocate(Index_Name, .after = Effective_After_Close_Date) %>%
-        # relocate(index_weight, .after = Index_Name) %>%
-        # mutate(current_shares = as.numeric(Base_Holdings) * index_weight) %>%
-        # mutate(new_shares = as.numeric(New_Effective_Float_Factor) * as.numeric(New_Effective_TSO) * index_weight / 100) %>%
-        # mutate(new_shares = ifelse(is.na(new_shares), 0, new_shares)) %>%
-        # mutate(share_change = new_shares - current_shares) %>%
-        # relocate(Event_Label, .after = Index_Name) %>%
-        # relocate(Change_Description, .after = Event_Label) %>%
+
         mutate(abs_holdings_change = abs(Holdings_Change)) %>%
         group_by(Ticker) %>%
         arrange(-abs_holdings_change)
@@ -158,10 +145,6 @@ while (TRUE) {
         relocate(Holdings_Change, .after = share_change) %>%
         relocate(index_weight, .after = Index_Name)
       
-      # joined_list <- joined_list %>%
-      #   group_by(Ticker) %>%
-      # mutate(share_change = ifelse(Holdings_Change > 0, share_change, share_change* -1))
-      
       joined_list <- joined_list %>%
         mutate(current_shares = as.numeric(Base_Holdings) * index_weight) %>%
         mutate(new_shares = as.numeric(New_Holdings) * index_weight)%>%
@@ -187,13 +170,10 @@ while (TRUE) {
       joined_list$New_Holdings[which(joined_list$New_Holdings == "")] <- 0
       
       
-      
-      # joined_list[is_empty(joined_list)]
       no_weight_list <- filter(joined_list, index_weight == 0)
       
       
       for (i in 1:nrow(no_weight_list)){
-        
         index <- no_weight_list$Index_Name[i]
         
         if(index == "CRSP US Total Market Index"){
@@ -203,7 +183,7 @@ while (TRUE) {
             index_weight = filter(iwf_weights, as.numeric(IWF) == as.numeric(no_weight_list$New_Effective_Float_Factor[i]))[2] %>%
               as.numeric()
           }
-          
+  
         } 
         else if(index == "CRSP US Mega Cap Index"){
           index_weight = filter(iwf_weights, as.numeric(IWF) == as.numeric(no_weight_list$Base_Effective_Float_Factor[i]))[3] %>%
@@ -329,7 +309,6 @@ while (TRUE) {
       
       weighted_list <- filter(joined_list, index_weight != 0 ) %>%
         mutate(is_index_weight_estimated = "N")
-      # weighted_list <- filter(joined_list, index_weight == 0)
       
       
       joined_list <- rbind(weighted_list, no_weight_list) %>%
@@ -342,15 +321,13 @@ while (TRUE) {
         filter(Effective_After_Close_Date == max(Effective_After_Close_Date)) %>%
         group_by(Ticker, Effective_After_Close_Date)
       
-      
 
-      # previous_file_name <- "P:/CRSP/crsp_indexchanges_20230310_1830.csv"
       previous_file <- read_csv(previous_file_name)
     
       
       changes <- anti_join(joined_list %>% ungroup(), previous_file %>% ungroup(), by = c("Ticker", "Effective_After_Close_Date"))
       
-      ######
+
       if(nrow(changes) > 0){
         
 
@@ -381,19 +358,19 @@ while (TRUE) {
       share_change_summary <-   inner_join(share_change_summary, event_subset, by = c("symbol" =  "Ticker"))
       
       colnames(share_change_summary) <- c("symbol", "share change", "last price", "dollar value", "effective date", "event label", "change description")
-      # write_csv(joined_list, new_file_name)
-      # write_csv(share_change_summary, new_file_name_summary)
+
       
       
       write_csv(joined_list, new_file_name)
       write_xlsx(share_change_summary, new_file_name_summary)
       
-
+      email_list <- c("email1", "email2")
+      to_phone_num <- "#####"
+      from_phone num <- "######"
+      
         test_email <-
           gm_mime() %>%
-          gm_to(c("mk@merusglobal.com", "acd@merusglobal.com", "tol@merusglobal.com", "mjc@merusglobal.com", "glg@merusglobal.com",
-                  "tw@merusglobal.com", "bjd@merusglobal.com", "fn@merusglobal.com",
-                  "bdb@merusglobal.com", "rsb@merusglobal.com")) %>%
+          gm_to(email_list) %>%
           gm_from("kosachevskyym@gmail.com") %>%
           gm_subject(paste("CRSP Index Changes", as.character(Sys.time()))) %>%
           gm_text_body("CRSP Daily Index Changes") %>%
@@ -409,8 +386,8 @@ while (TRUE) {
           #if an error occurs, tell me the error
           error=function(e) {
             tw_send_message(
-              to = "+13363838044",
-              from = "+18885657579",
+              to = to_phone_num,
+              from = from_phone,
               body = "CRSP FWD Error!"
               
             ) 
@@ -420,8 +397,8 @@ while (TRUE) {
 
         #if no error, it'll send me a successful text 
         tw_send_message(
-          to = "+13363838044",
-          from = "+18885657579",
+          to = to_phone_num,
+          from = from_phone,
           body = "New CRSP Email"
           
         ) 
